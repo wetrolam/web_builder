@@ -4,10 +4,13 @@ require('fileutils')
 require('pathname')
 
 def wbuilder(args)
-    p "---- build start (" + __FILE__ + ") ----"
+    p "---- wbuilder start (" + __FILE__ + ") ----"
     projectDir = File.expand_path(args[0])
+    p "---- error check start ----"
+    checkCodeError(projectDir)
+    p "---- build start ----"
     build(projectDir)
-    p "---- build end ----"
+    p "---- wbuilder end ----"
 end
 
 def build(projectDir)
@@ -63,6 +66,27 @@ def build(projectDir)
 
 end
 
+def checkCodeError(projectDir)
+    srcDir = projectDir.to_s + '/src'
+    tmpDir = projectDir.to_s + '/tmpCodeChecker' 
+
+    FileUtils.rm_rf(tmpDir)
+    FileUtils.mkdir_p(tmpDir)
+
+    Dir[srcDir + '/**/*.{c,cpp,cc,h,hpp}'].each { |srcFile|
+        tmpFile = tmpDir + '/' + File.basename(srcFile)
+        FileUtils.cp(srcFile, tmpFile)
+
+        compiler = (File.extname(tmpFile) == ".c" ? "gcc" : "g++")
+        warningFlag = (/zadanie/ =~ srcFile ? "" : "-Wall")
+
+        command ="#{compiler} #{warningFlag} -o #{tmpDir}/a.exe #{tmpFile}"
+        p command
+        `#{command}`
+    }
+
+   FileUtils.rm_rf(tmpDir)
+end
 
 if __FILE__ == $0
     wbuilder(ARGV)
