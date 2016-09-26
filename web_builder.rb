@@ -43,7 +43,7 @@ def build(projectDir)
     }
 
     # copy files without transformation needed
-    Dir[srcDir + '/**/*.{css,png,c,cpp,cc,h,hpp}'].each { |src|
+    Dir[srcDir + '/**/*.{css,png,gif,c,cpp,cc,h,hpp}'].each { |src|
         relative = Pathname.new(src).relative_path_from(Pathname.new(srcDir)).to_s
         dest = distDir + '/' + relative
         FileUtils.mkdir_p(File.dirname(dest)) #pre pripad ze neexistuje adresar
