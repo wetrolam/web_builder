@@ -6,11 +6,19 @@ require('pathname')
 def wbuilder(args)
     p "---- wbuilder start (" + __FILE__ + ") ----"
     projectDir = File.expand_path(args[0])
+    clearDistributionDirectory(projectDir)
     p "---- error check start ----"
     checkCodeError(projectDir)
     p "---- build start ----"
     build(projectDir)
     p "---- wbuilder end ----"
+end
+
+#Create a fresh distribution directory (output directory)
+def clearDistributionDirectory(projectDir)
+    distDir = projectDir.to_s + '/dist'
+    FileUtils.rm_rf(distDir)
+    FileUtils.mkdir_p(distDir)
 end
 
 def build(projectDir)
@@ -21,10 +29,6 @@ def build(projectDir)
     puts("srcDir      = #{srcDir}")
     puts("distDir     = #{distDir}")
     puts("templateDir = #{templateDir}")
-
-    # create empty directory 'dist'
-    FileUtils.rm_rf(distDir)
-    FileUtils.mkdir_p(distDir)
 
     # get html template
     template = IO.read(templateDir + '/template.html')
