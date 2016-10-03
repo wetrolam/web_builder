@@ -1,5 +1,6 @@
 require_relative('html_processor')
 require_relative('cpp_to_html_processor')
+require_relative('cpp')
 require('fileutils')
 require('pathname')
 
@@ -7,10 +8,10 @@ def wbuilder(args)
     p "---- wbuilder start (" + __FILE__ + ") ----"
     projectDir = File.expand_path(args[0])
     clearDistributionDirectory(projectDir)
-    p "---- error check start ----"
-    checkCodeError(projectDir)
     p "---- build start ----"
     build(projectDir)
+    p "---- error check start ----"
+    checkCodeError(projectDir)
     p "---- wbuilder end ----"
 end
 
@@ -50,46 +51,27 @@ def build(projectDir)
     }
 
     # copy files without transformation needed
-    Dir[srcDir + '/**/*.{css,png,gif,c,cpp,cc,h,hpp}'].each { |src|
+    Dir[srcDir + '/**/*.{css,png,gif}'].each { |src|
         relative = Pathname.new(src).relative_path_from(Pathname.new(srcDir)).to_s
         dest = distDir + '/' + relative
         FileUtils.mkdir_p(File.dirname(dest)) #pre pripad ze neexistuje adresar
         FileUtils.cp(src, dest)
     }
 
+    # copy (and modify) source files
+    Dir[srcDir + '/**/*.{c,cpp,cc,h,hpp}'].each { |srcFile|
+        distributeCpp(srcFile, srcDir, distDir)
+    }
+
     # c++ -> html
-    Dir[srcDir + '/**/*.{c,cpp,cc,h,hpp}'].each { |srcFile|
-        relative = Pathname.new(srcFile).relative_path_from(Pathname.new(srcDir)).to_s
-        destFile = distDir + '/' + relative + ".html"
-        # FileUtils.mkdir_p(File.dirname(dest)) # the directory is already created in previous step
-
-        cppText = IO.read(srcFile)
-        cppHtmlText = cpp_to_html(cppText, template, relative + ".html")
-        IO.write(destFile, cppHtmlText)
+    Dir[distDir + '/**/*.{c,cpp,cc,h,hpp}'].each { |cppFile|
+        cppHtmlFile = cppFile + ".html"
+        titleTail = File.basename(cppHtmlFile)
+        cppText = IO.read(cppFile)
+        cppHtmlText = cpp_to_html(cppText, template, titleTail)
+        IO.write(cppHtmlFile, cppHtmlText)
     }
 
-end
-
-def checkCodeError(projectDir)
-    srcDir = projectDir.to_s + '/src'
-    tmpDir = projectDir.to_s + '/tmpCodeChecker' 
-
-    FileUtils.rm_rf(tmpDir)
-    FileUtils.mkdir_p(tmpDir)
-
-    Dir[srcDir + '/**/*.{c,cpp,cc,h,hpp}'].each { |srcFile|
-        tmpFile = tmpDir + '/' + File.basename(srcFile)
-        FileUtils.cp(srcFile, tmpFile)
-
-        compiler = (File.extname(tmpFile) == ".c" ? "gcc" : "g++")
-        warningFlag = (/zadanie/ =~ srcFile ? "" : "-Wall")
-
-        command ="#{compiler} #{warningFlag} -o #{tmpDir}/a.exe #{tmpFile}"
-        p command
-        `#{command}`
-    }
-
-   FileUtils.rm_rf(tmpDir)
 end
 
 if __FILE__ == $0
