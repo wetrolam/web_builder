@@ -4,7 +4,7 @@ $cppSourceVersionsOption = {
     'zadanie': 'Z'
 }
 
-$cppSourceVersions = $cppSourceVersionsOption.map{ |key, value| [key, '\s*//#' + value.to_s + '\s*$'] }.to_h()
+$cppSourceVersions = $cppSourceVersionsOption.map{ |key, value| [key, '\s*//#' + value.to_s + '\s*'] }.to_h()
 
 $cppSourceVersions.each{ |key, value|
     puts key.to_s + " -> " + value.to_s
