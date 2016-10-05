@@ -86,7 +86,7 @@ def checkCodeError(projectDir)
         tmpFile = tmpDir + '/' + File.basename(inputFile)
         FileUtils.cp(inputFile, tmpFile)
 
-        compiler = (File.extname(tmpFile) == ".c" ? "gcc" : "g++")
+        compiler = (File.extname(tmpFile) == ".c" ? "gcc -std=c11" : "g++ -std=c++11" )
         warningFlag = (/zadanie/ =~ inputFile ? "" : "-Wall")
 
         command ="#{compiler} #{warningFlag} -o #{tmpDir}/a.exe #{tmpFile}"
