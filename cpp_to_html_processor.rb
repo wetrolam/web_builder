@@ -32,7 +32,7 @@ def cpp_to_html(cpp, template, titleTail)
 end
 
 $keywords = [
-'class', # have to be first
+'class', # have to be the first
 'alignas',
 'alignof',
 'and',
