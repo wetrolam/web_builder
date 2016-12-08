@@ -9,8 +9,10 @@
 }
 .preprocessor {
 	color: blue;
+    /*color: #800000;*/
     font-weight: bold;
 }
 .data {
-    color: red;
+    /*color: #800000;*/
+    color: blue;
 }
