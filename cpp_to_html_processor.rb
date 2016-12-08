@@ -1,21 +1,163 @@
 require_relative('html_processor')
 
-def cpp_to_html(cpp, template, titleTail)
-    # < ->  &lt < -> &gt;
-    html = cpp.gsub('<', '&lt;').gsub('>', '&gt;')
+#Code segment
+class Segment
+  def initialize(beginPos:, endPos:, cssClass:)
+    @beginPos = beginPos
+    @endPos   = endPos
+    @cssClass = cssClass
+  end
 
-    # keywords
+  attr_reader :beginPos, :endPos, :cssClass
+end
+
+class Keyword
+  @@cssClass = 'keyword'
+
+  def self.createList(cpp, startDivList, endDivList)
+    positions = [];
     $keywords.each{ |keyword|
-        html.gsub!(%r[(\W)#{keyword}(\W)], "\\1<span class=\"keyword\">#{keyword}</span>\\2")
+      position = cpp.enum_for(:scan, %r[(?<=\W)#{keyword}(?=\W)]).map {Segment.new(beginPos: Regexp.last_match.begin(0), endPos:Regexp.last_match.end(0)-1, cssClass: @@cssClass)}
+      positions += position
     }
+    positions.each{ |item|
+      startDivList[item.beginPos] << item.cssClass
+      endDivList  [item.endPos  ] << item.cssClass
+    }
+  end
+end
 
-    # comments
-    html.gsub!(/\/\/(.*)$/, "<span class=\"comment\">\\0</span>") # backslash at the end of a line is not solved!
-    html.gsub!(/\/\*(.*?)\*\//m, "<span class=\"comment\">\\0</span>")
+class Preprocessor
+  @@cssClass = 'preprocessor'
 
-    # preprocessor
-    # html.gsub!(%r[^\s*\#.*$], "<span class=\"preprocessor\">\\0</span>") # backslash at the end of a line is not solved!
-    html.gsub!(/^[ \t]*#.*$/, "<span class=\"preprocessor\">\\0</span>") # backslash at the end of a line is not solved!
+  def self.createList(cpp, startDivList, endDivList)
+    positions = cpp.enum_for(:scan, /^[ \t]*(#.*?)(?<!\\)$/m).map {Segment.new(beginPos: Regexp.last_match.begin(1), endPos:Regexp.last_match.end(1)-1, cssClass: @@cssClass)}
+    positions.each{ |item|
+      startDivList[item.beginPos] << item.cssClass
+      endDivList  [item.endPos  ] << item.cssClass
+    }
+  end
+end
+
+class Comment
+  CSS_CLASS = 'comment'
+
+  def self.createList(cpp, startDivList, endDivList)
+    positions = []
+    positions += cpp.enum_for(:scan, /\/\/(.*?)(?<!\\)$/m).map {Segment.new(beginPos: Regexp.last_match.begin(0), endPos:Regexp.last_match.end(0)-1, cssClass: CSS_CLASS)}
+    positions += cpp.enum_for(:scan, /\/\*(.*?)\*\//m).map {Segment.new(beginPos: Regexp.last_match.begin(0), endPos:Regexp.last_match.end(0)-1, cssClass: CSS_CLASS)}
+    positions.each{ |item|
+      startDivList[item.beginPos] << item.cssClass
+      endDivList  [item.endPos  ] << item.cssClass
+    }
+  end
+end
+
+class String
+  CSS_CLASS = 'data'
+
+  def self.createList(cpp, startDivList, endDivList)
+    positions = cpp.enum_for(:scan, /"(.*?)(?<!\\)"/m).map {Segment.new(beginPos: Regexp.last_match.begin(0), endPos:Regexp.last_match.end(0)-1, cssClass: CSS_CLASS)}
+    positions.each{ |item|
+      startDivList[item.beginPos] << item.cssClass
+      endDivList  [item.endPos  ] << item.cssClass
+    }
+  end
+end
+
+# dokoncit regularny vyraz
+class Number
+  CSS_CLASS = 'data'
+
+  def self.createList(cpp, startDivList, endDivList)
+    positions = cpp.enum_for(:scan, /(\W)(-?\d+)(\W)/).map {Segment.new(beginPos: Regexp.last_match.begin(2), endPos:Regexp.last_match.end(2)-1, cssClass: CSS_CLASS)}
+    positions.each{ |item|
+      startDivList[item.beginPos] << item.cssClass
+      endDivList  [item.endPos  ] << item.cssClass
+    }
+  end
+end
+
+class Char
+  CSS_CLASS = 'data'
+
+  def self.createList(cpp, startDivList, endDivList)
+    positions = cpp.enum_for(:scan, /'.'/).map {Segment.new(beginPos: Regexp.last_match.begin(0), endPos:Regexp.last_match.end(0)-1, cssClass: CSS_CLASS)}
+    positions.each{ |item|
+      startDivList[item.beginPos] << item.cssClass
+      endDivList  [item.endPos  ] << item.cssClass
+    }
+  end
+end
+
+
+# < ->  &lt < -> &gt;
+def encode(letter)
+  case letter
+  when '<'
+    return '&lt;'
+  when '>'
+    return '&gt;'
+  else
+    return letter
+  end
+end
+
+def replaceSegmentsBySpaces(cpp, startDivList, endDivList, cssClass)
+  withoutComment = ""
+  insideComment = false
+  for pos in 0..cpp.length-1
+    segment = startDivList[pos].include?(cssClass)
+    if segment
+      insideComment = true
+    end
+
+    if insideComment
+      withoutComment += ' '
+    else
+      withoutComment += cpp[pos]
+    end
+
+    segment = endDivList[pos].include?(cssClass)
+    if segment
+      insideComment = false
+    end
+  end
+
+  return withoutComment
+end
+
+def cpp_to_html(cpp, template, titleTail)
+    startDivList = Array.new(cpp.length) {[]}
+    endDivList   = Array.new(cpp.length) {[]}
+    Comment.createList(cpp, startDivList, endDivList)
+    withoutComment = replaceSegmentsBySpaces(cpp, startDivList, endDivList, Comment::CSS_CLASS)
+
+    String.createList(withoutComment, startDivList, endDivList)
+    Number.createList(withoutComment, startDivList, endDivList)
+    Char.createList(withoutComment, startDivList, endDivList)
+    cppCode = replaceSegmentsBySpaces(withoutComment, startDivList, endDivList, String::CSS_CLASS)
+    cppCode = replaceSegmentsBySpaces(cppCode       , startDivList, endDivList, Number::CSS_CLASS)
+    cppCode = replaceSegmentsBySpaces(cppCode       , startDivList, endDivList, Char::CSS_CLASS)
+
+    Preprocessor.createList(cpp, startDivList, endDivList)
+
+    Keyword.createList(cppCode, startDivList, endDivList)
+
+    html = ""
+    for pos in 0..cpp.length-1
+      classList = startDivList[pos]
+      for i in 0...(classList.size())
+        html += '<span class="' + classList[i] + '">'
+      end
+
+      # < ->  &lt < -> &gt;
+      html += encode(cpp[pos])
+
+      endDivList[pos].size().times {
+        html += '</span>'
+      }
+    end
 
     # <pre><code> wrapping
     html = '<pre><code>' + html + '</code></pre>'
