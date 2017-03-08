@@ -1,6 +1,6 @@
 
 def wrapHtmlBody(bodyText, template, titleTail = nil)
-    html = template.sub(/(?<=<body>).*(?=<\/body>)/m, "\n\n" + bodyText + "\n\n")
+    html = template.sub(/(?<=<body>).*(?=<\/body>)/m) {|str| "\n\n#{bodyText}\n\n"} # used the block form of String.sub to avoid back-references in 'bodyText'
     if titleTail != nil
         html.sub!(/(?<=<title>).*(?=<\/title>)/m, "\\0 - #{titleTail}")
     end
