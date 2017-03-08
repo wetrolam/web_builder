@@ -8,8 +8,8 @@
 	font-style: italic;
 }
 .preprocessor {
-	color: blue;
-    /*color: #800000;*/
+	/*color: blue;*/
+    color: #800000;
     font-weight: bold;
 }
 .data {
