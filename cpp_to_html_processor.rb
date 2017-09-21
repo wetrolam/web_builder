@@ -98,6 +98,8 @@ def encode(letter)
     return '&lt;'
   when '>'
     return '&gt;'
+  when '&'
+    return '&amp'
   else
     return letter
   end
